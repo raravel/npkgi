@@ -18,20 +18,42 @@ export interface HookArgument {
 	data: any;
 }
 
-export interface InstallOptions {
+export interface InstallItem {
 	name: string;
 	version: string;
+}
+
+export interface InstallOptions {
 	hook?: (s: HookArgument) => void;
 	rootDir?: string;
 }
 
-const hook = (opt: InstallOptions, arg: HookArgument) =>
-	setImmediate(() => (opt.hook as any)(arg));
+export interface InstallArgument {
+	name: string;
+	version: string;
+	hook: (s: HookArgument) => void;
+	rootDir: string;
+}
 
-export async function install(options: InstallOptions) {
-	if ( typeof options.hook !== 'function' ) {
-		options.hook = () => {};
-	}
+const hook = (opt: InstallArgument, arg: HookArgument) =>
+	setImmediate(() => opt.hook(arg));
+
+export function install(args: InstallItem[], opt: InstallOptions) {
+	const cwd = process.cwd();
+	return Promise.all(
+		args.map((arg: InstallItem) => {
+			const hook = opt.hook || (() => {});
+			return _install({
+				hook,
+				rootDir: opt.rootDir || cwd,
+				name: arg.name,
+				version: arg.version,
+			})
+		})
+	);
+}
+
+export async function _install(options: InstallArgument) {
 	hook(options, {
 		name: 'query',
 		progress: 'start',
@@ -60,10 +82,6 @@ export async function install(options: InstallOptions) {
 			return d;
 		})
 	);
-
-	if ( !options.rootDir ) {
-		options.rootDir = process.cwd();
-	}
 
 	const tmpDir = path.resolve((options.rootDir as string), '.npkgi-tmp');
 	if ( !exists(tmpDir) ) {
