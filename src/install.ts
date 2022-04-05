@@ -12,16 +12,33 @@ import { existsSync as exists } from 'fs';
 import decompress from './tgz-decompress';
 import move from './move';
 
-export async function install(options: any) {
+export interface HookArgument {
+	name: string;
+	progress: string;
+	data: any;
+}
+
+export interface InstallOptions {
+	name: string;
+	version: string;
+	hook?: (s: HookArgument) => void;
+	rootDir?: string;
+}
+
+const hook = (opt: InstallOptions, arg: HookArgument) =>
+	setImmediate(() => (opt.hook as any)(arg));
+
+export async function install(options: InstallOptions) {
 	if ( typeof options.hook !== 'function' ) {
 		options.hook = () => {};
 	}
-	options.hook({
+	hook(options, {
 		name: 'query',
 		progress: 'start',
+		data: null,
 	});
 	const list = await query(options.name, options.version);
-	options.hook({
+	hook(options, {
 		name: 'query',
 		progress: 'done',
 		data: list,
@@ -29,13 +46,13 @@ export async function install(options: any) {
 	const req = await Promise.all(
 		Object.values(list)
 		.map(async (pkg: any) => {
-			options.hook({
+			hook(options, {
 				name: 'request',
 				progress: 'start',
 				data: pkg,
 			});
 			const d = await get(pkg)
-			options.hook({
+			hook(options, {
 				name: 'request',
 				progress: 'done',
 				data: pkg,
@@ -48,20 +65,20 @@ export async function install(options: any) {
 		options.rootDir = process.cwd();
 	}
 
-	const tmpDir = path.resolve(options.rootDir, '.npkgi-tmp');
+	const tmpDir = path.resolve((options.rootDir as string), '.npkgi-tmp');
 	if ( !exists(tmpDir) ) {
 		await fs.mkdir(tmpDir, { recursive: true });
 	}
 
 	const writeQ = req.map(async (pkg: any) => {
-		options.hook({
+		hook(options, {
 			name: 'install',
 			progress: 'start',
 			data: pkg,
 		});
 		const target = path.resolve(tmpDir, pkg.name);
 		const targetDir = path.dirname(target);
-		const module = path.resolve(options.rootDir, 'node_modules', path.basename(target));
+		const module = path.resolve((options.rootDir as string), 'node_modules', pkg.name);
 
 		if ( exists(module) ) {
 			return;
@@ -74,7 +91,7 @@ export async function install(options: any) {
 		await decompress(target + '.tgz', target);
 		await fs.rm(target + '.tgz');
 		await move(target, module);
-		options.hook({
+		hook(options, {
 			name: 'install',
 			progress: 'done',
 			data: pkg,
@@ -82,5 +99,6 @@ export async function install(options: any) {
 	});
 
 	await Promise.all(writeQ);
+	await fs.rmdir(tmpDir, { recursive: true });
 
 }
