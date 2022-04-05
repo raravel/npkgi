@@ -7,8 +7,7 @@
 import { query } from './query';
 import { get } from './get';
 import path from 'path';
-import fs from 'fs/promises';
-import { existsSync as exists } from 'fs';
+import { existsSync as exists, promises as fs } from 'fs';
 import decompress from './tgz-decompress';
 import move from './move';
 

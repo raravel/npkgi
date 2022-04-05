@@ -4,8 +4,8 @@
  *
  * Copyright (c) raravel. Licensed under the MIT License.
  */
-import { rename, mkdir } from 'fs/promises';
-import { existsSync as exists } from 'fs';
+import { existsSync as exists, promises } from 'fs';
+const { rename, mkdir } = promises;
 import { dirname } from 'path';
 
 export default async function(src: string, dist: string) {
