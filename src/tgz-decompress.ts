@@ -8,13 +8,13 @@ import decompress from 'decompress';
 import targz from 'decompress-targz';
 
 export default async function(src: string, dist: string) {
-	return await decompress(src, dist, {
-		plugins: [
-			targz(),
-		],
-		map: (file) => {
-			file.path = file.path.replace(/^package\//, '');
-			return file;
-		},
-	});
+    return await decompress(src, dist, {
+        plugins: [
+            targz(),
+        ],
+        map: (file) => {
+            file.path = file.path.replace(/^package\//, '');
+            return file;
+        },
+    });
 }
